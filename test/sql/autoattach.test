@@ -1,0 +1,18 @@
+# name: test/sql/autoattach.test
+# description: test autoattach extension
+# group: [autoattach]
+
+# Before we load the extension, this will fail
+statement error
+SELECT attach_auto('db1', '/tmp/*.duckdb');
+----
+Catalog Error: Scalar Function with name autoattach does not exist!
+
+# Require statement will ensure this test is run with this extension loaded
+require autoattach
+
+# Confirm the extension works
+query I
+SELECT attach_auto('Sam');
+----
+Foo

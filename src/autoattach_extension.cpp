@@ -7,28 +7,52 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension_util.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
-
+#include "duckdb/common/unordered_map.hpp"
+#include "duckdb/main/attached_database.hpp"
 #include <efsw/efsw.hpp>
+
 
 class UpdateListener : public efsw::FileWatchListener {
   private:
-    duckdb::DuckDB &db;
+    duckdb::ClientContext* context;
+    // duckdb::shared_ptr<duckdb::DuckDB> db;
+    std::string current_attached_file;
     std::string db_alias;
   public:
-    UpdateListener(duckdb::DuckDB &db, const std::string &alias) 
-        : db(db), db_alias(alias) {}
+    UpdateListener(duckdb::ClientContext* context, const std::string &alias) 
+        : context(context), db_alias(alias) {}
 
     void attach(const std::string& new_db_path) {
-        duckdb::Connection con(db);
-        auto watched_db = db.instance->GetDatabaseManager().GetDatabase(*con.context, db_alias);
-        auto current_db_path = duckdb::Catalog::GetCatalog(*watched_db).GetDBPath();
+        duckdb::Connection con(*context->db);
+        context->RunFunctionInTransaction([&]() {
+          auto watched_db = context->db->GetDatabaseManager().GetDatabase(*context, db_alias);
+          std::string current_db_path;
+          if (watched_db) {
+            current_db_path = duckdb::Catalog::GetCatalog(*watched_db).GetDBPath();
+          } else {
+            current_db_path = "";
+          }
         // Run a Query() to fetch the current attached file
 
         // Check if the filename is lexicographically greater than the current attached file
         if (new_db_path > current_db_path) {
-            con.Query("ATTACH OR REPLACE '" + new_db_path + "' AS " + db_alias);
+            auto attach_info = duckdb::unique_ptr<duckdb::AttachInfo>(new duckdb::AttachInfo());
+            attach_info->name = db_alias;
+            attach_info->path = new_db_path;
+            attach_info->on_conflict = duckdb::OnCreateConflict::REPLACE_ON_CONFLICT;
+            std::cerr << "Attaching " << new_db_path << " as " << db_alias << std::endl;
+            duckdb::AttachOptions options(attach_info, duckdb::AccessMode::READ_ONLY);
+            // context->db->GetDatabaseManager().AttachDatabase(*context, *attach_info, options);
+            // con.BeginTransaction();
+            auto result = con.Query("ATTACH OR REPLACE '" + new_db_path + "' AS " + db_alias);
+            if (result->HasError()) {
+                std::cerr << result->GetError() << std::endl;
+            } else {
+                std::cerr << result->ToString() << std::endl;
+            }
+            // con.Commit();
         }
-
+        });
     }
 
     void handleFileAction( efsw::WatchID watchid, const std::string& dir,
@@ -55,19 +79,38 @@ class UpdateListener : public efsw::FileWatchListener {
     }
 };
 
+class ListenerClientContextState : public duckdb::ClientContextState {
+    private:
+    efsw::FileWatcher* fileWatcher = nullptr;
+    public:
+    ListenerClientContextState() : fileWatcher(new efsw::FileWatcher()) {}
+    efsw::FileWatcher* getFileWatcher() { return fileWatcher; }
+    void addWatch(const std::string& path, const std::string& alias, duckdb::ClientContext& context) {
+        auto listener = new UpdateListener(&context, alias);
+        // TODO: bootstrap the listener with the first file to attach
+        std::cerr << "Adding watch to: " << path << std::endl;
+        fileWatcher->addWatch(path, listener, false);
+        // Start watching asynchronously the directories
+        fileWatcher->watch();
+        std::cerr << "Watching directories: " << fileWatcher->directories().size() << std::endl;
+    }
+};
+
+// SELECT attach_auto('watched_db', '/Users/xevix/dbtest');
 namespace duckdb {
 inline void AutoattachScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
+    // TODO: sanitize input, check if path exists, etc.
     auto &name_vector = args.data[0];
     auto &pattern_vector = args.data[1];
-    
+
+    auto const &listener_state = state.GetContext().registered_state->GetOrCreate<ListenerClientContextState>("listener_client_context_state");
+
     BinaryExecutor::Execute<string_t, string_t, string_t>(
         name_vector, pattern_vector, result, args.size(),
         [&](string_t name, string_t pattern) {
-            // TODO: call the extension's addWatch method
-            addWatch(name.GetString(), pattern.GetString());
+            listener_state->addWatch(pattern.GetString(), name.GetString(), state.GetContext());
             return StringVector::AddString(result, 
-                "Autoattach: watching for pattern " + pattern.GetString() + 
-                " (" + name.GetString() + ") ��");
+                "alias: " + name.GetString());
         });
 }
 
@@ -81,17 +124,9 @@ static void LoadInternal(DatabaseInstance &instance) {
 }
 
 void AutoattachExtension::Load(DuckDB &db) {
-    this->db_instance = &db;
-    this->fileWatcher = new efsw::FileWatcher();
+    // this->db_instance = &db;
+    // this->fileWatcher = new efsw::FileWatcher();
     LoadInternal(*db.instance);
-}
-
-void AutoattachExtension::Unload() {
-    if (fileWatcher) {
-        delete fileWatcher;
-        fileWatcher = nullptr;
-    }
-    db_instance = nullptr;  // Clear database reference
 }
 
 std::string AutoattachExtension::Name() {
@@ -104,14 +139,6 @@ std::string AutoattachExtension::Version() const {
 #else
 	return "";
 #endif
-}
-
-void AutoattachExtension::addWatch(const std::string& path, const std::string& alias) {
-    auto listener = new UpdateListener(*this->db_instance, alias);
-    // TODO: bootstrap the listener with the first file to attach
-    fileWatcher->addWatch(path, listener, false);
-    // Start watching asynchronously the directories
-    fileWatcher->watch();
 }
 
 } // namespace duckdb

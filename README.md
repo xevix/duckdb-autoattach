@@ -4,15 +4,39 @@ WIP
 
 This extension watches directories for DuckDB files and automatically attaches and replaces a database alias with the latest file. This lets a webserver or app with a long-running DuckDB instance easily update to the latest version of a file produced upstream.
 
+Internally EFSW is used to watch files, and the `ATTACH OR REPLACE` functionality is used to atomically replace databases.
+
 - [ ] S3 watcher
 - [X] Filesystem watcher
+- [ ] Attach latest file on first call to attach_auto()
+- [ ] Glob pattern matching for watched dirs
+- [ ] Input validation to attach_auto()
 
 This repository is based on https://github.com/duckdb/extension-template, check it out if you want to build and ship your own DuckDB extension.
 
----
+## Install
 
-This extension, Autoattach, allow you to ... <extension_goal>.
+For now it must be built from source using the standard DuckDB build mechanism.
 
+```
+$ GEN=ninja make
+```
+
+## Usage
+
+```
+-- ATTACH using alias 'watched_db' files matching the given pattern
+SELECT attach_auto('watched_db', '/path/to/watch/*.duckdb');
+
+-- Query as usual
+FROM watched_db.tbl;
+
+-- ... newer file added to watched directory ...
+
+-- Continue querying as usual, but will have latest data
+FROM watched_db.tbl;
+
+```
 
 ## Building
 ### Managing dependencies

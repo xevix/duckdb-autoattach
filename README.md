@@ -1,4 +1,11 @@
-# Autoattach
+# Autoattach DuckDB Extension
+
+WIP
+
+This extension watches directories for DuckDB files and automatically attaches and replaces a database alias with the latest file. This lets a webserver or app with a long-running DuckDB instance easily update to the latest version of a file produced upstream.
+
+- [ ] S3 watcher
+- [X] Filesystem watcher
 
 This repository is based on https://github.com/duckdb/extension-template, check it out if you want to build and ship your own DuckDB extension.
 

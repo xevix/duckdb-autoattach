@@ -8,7 +8,7 @@ Internally EFSW is used to watch files, and the `ATTACH OR REPLACE` functionalit
 
 - [ ] S3 watcher
 - [X] Filesystem watcher
-- [ ] Attach latest file on first call to attach_auto()
+- [X] Attach latest file on first call to attach_auto()
 - [ ] Glob pattern matching for watched dirs
 - [ ] Input validation to attach_auto()
 

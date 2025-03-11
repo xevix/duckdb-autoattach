@@ -10,6 +10,7 @@
 #include "duckdb/common/unordered_map.hpp"
 #include "duckdb/main/attached_database.hpp"
 #include <efsw/efsw.hpp>
+#include <boost/filesystem.hpp>
 
 #include "update_listener.hpp"
 
@@ -20,10 +21,31 @@ public:
 	efsw::FileWatcher *getFileWatcher() {
 		return fileWatcher;
 	}
+
+	std::string getLatestFileAtPath(const std::string &path) {
+		// Get all files in the directory using Boost filesystem
+		std::string latest_file = "";
+		boost::filesystem::path dir_path(path);
+
+		if (boost::filesystem::exists(dir_path) && boost::filesystem::is_directory(dir_path)) {
+			for (const auto &entry : boost::filesystem::directory_iterator(dir_path)) {
+				if (boost::filesystem::is_regular_file(entry)) {
+					auto latest_file_candidate = entry.path().filename().string();
+					if (entry.path().extension() == ".duckdb" && latest_file_candidate > latest_file) {
+						latest_file = latest_file_candidate;
+					}
+				}
+			}
+		}
+
+		return latest_file;
+	}
+
 	void addWatch(const std::string &path, const std::string &alias, duckdb::ClientContext &context) {
 		auto listener = new UpdateListener(&context, alias);
 		// TODO: bootstrap the listener with the first file to attach
 		std::cerr << "Adding watch to: " << path << std::endl;
+		listener->attach(path + "/" + getLatestFileAtPath(path), false);
 		fileWatcher->addWatch(path, listener, false);
 		// Start watching asynchronously the directories
 		fileWatcher->watch();

@@ -2,6 +2,7 @@
 
 #include "duckdb.hpp"
 #include <efsw/efsw.hpp>
+#include "s3_watcher.hpp"
 
 class ListenerClientContextState : public duckdb::ClientContextState {
 public:
@@ -15,6 +16,8 @@ public:
 	void attach_or_replace(const std::string &db_alias, const std::string &new_db_path);
 
 	void attach(const std::string &db_alias, const std::string &new_db_path, bool lock);
+
+	void attach_latest_remote_file(const std::string &path, const std::string &alias, bool lock);
 
 	std::string getLatestFileAtPath(const std::string &path);
 
@@ -30,4 +33,5 @@ public:
 private:
 	efsw::FileWatcher *fileWatcher = nullptr;
 	duckdb::ClientContext *context = nullptr;
+	std::vector<std::unique_ptr<S3Watcher>> s3Watchers;
 };

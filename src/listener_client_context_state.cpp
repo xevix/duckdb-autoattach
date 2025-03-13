@@ -1,9 +1,10 @@
 #include <boost/filesystem.hpp>
 #include <iostream>
-
+#include "duckdb/common/types.hpp"
+#include "duckdb/common/unique_ptr.hpp"
 #include "listener_client_context_state.hpp"
 #include "update_listener.hpp"
-
+#include "s3_watcher.hpp"
 efsw::FileWatcher *ListenerClientContextState::getFileWatcher() {
 	return fileWatcher;
 }
@@ -34,6 +35,9 @@ void ListenerClientContextState::attach_or_replace(const std::string &db_alias, 
 		} else {
 			std::cerr << result->ToString() << std::endl;
 		}
+	} else {
+		std::cerr << "Skipping attach for " << new_db_path << " because it is not lexicographically greater than "
+		          << current_db_path << std::endl;
 	}
 }
 
@@ -44,6 +48,12 @@ void ListenerClientContextState::attach(const std::string &db_alias, const std::
 	} else {
 		attach_or_replace(db_alias, new_db_path);
 	}
+}
+
+void ListenerClientContextState::attach_latest_remote_file(const std::string &path, const std::string &alias,
+                                                           bool lock) {
+	auto latest_file = getLatestAtRemotePath(path);
+	attach(alias, latest_file, lock);
 }
 
 std::string ListenerClientContextState::getLatestFileAtPath(const std::string &path) {
@@ -94,8 +104,12 @@ void ListenerClientContextState::addLocalWatch(const std::string &path, const st
 void ListenerClientContextState::addRemoteWatch(const std::string &path, const std::string &alias) {
 	// TODO: implement
 	std::cerr << "Adding watch to: " << path << std::endl;
-	attach(alias, getLatestAtRemotePath(path), false);
+	attach_latest_remote_file(path, alias, false);
 	// TODO: add a polling mechanism to check for new files every X seconds
+	// Create and start the timer service
+	auto s3_watcher = duckdb::make_uniq<S3Watcher>(this, path, alias, 5);
+	s3_watcher->start();
+	s3Watchers.emplace_back(std::move(s3_watcher));
 }
 
 void ListenerClientContextState::addWatch(const std::string &path, const std::string &alias) {

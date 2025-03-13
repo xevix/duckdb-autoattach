@@ -1,6 +1,7 @@
 {
   "dependencies": [
     "boost-filesystem",
-    "efsw"
+    "efsw",
+    "boost-asio"
   ]
 }

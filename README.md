@@ -2,6 +2,8 @@
 
 WIP
 
+NOTE: Requires nightly/main for ATTACH OR REPLACE feature currently targeting DuckDB v1.3
+
 This extension watches directories for DuckDB files and automatically attaches and replaces a database alias with the latest file. This lets a webserver or app with a long-running DuckDB instance easily update to the latest version of a file produced upstream.
 
 Internally EFSW is used to watch local files, and the `ATTACH OR REPLACE` functionality is used to atomically replace databases.

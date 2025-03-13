@@ -22,29 +22,19 @@ std::string ListenerClientContextState::get_current_db_path(const std::string &d
 
 void ListenerClientContextState::attach_or_replace(const std::string &db_alias, const std::string &new_db_path) {
 	// Run a Query() to fetch the current attached file
-	std::cerr << "getting path" << std::endl;
 	auto current_db_path = get_current_db_path(db_alias);
-	std::cerr << "path: " << current_db_path << std::endl;
-	std::cerr << "new path: " << new_db_path << std::endl;
 	// Check if the filename is lexicographically greater than the current attached file
 	if (new_db_path > current_db_path) {
 		duckdb::Connection con(*context->db);
 		auto query = "ATTACH OR REPLACE '" + new_db_path + "' AS " + db_alias + " (READ_ONLY)";
-		std::cerr << "Attaching " << query << std::endl;
 		auto result = con.Query(query);
 		if (result->HasError()) {
 			std::cerr << result->GetError() << std::endl;
-		} else {
-			std::cerr << result->ToString() << std::endl;
 		}
-	} else {
-		std::cerr << "Skipping attach for " << new_db_path << " because it is not lexicographically greater than "
-		          << current_db_path << std::endl;
 	}
 }
 
 void ListenerClientContextState::attach(const std::string &db_alias, const std::string &new_db_path, bool lock) {
-	std::cerr << "attach" << std::endl;
 	if (lock) {
 		context->RunFunctionInTransaction([&]() { attach_or_replace(db_alias, new_db_path); });
 	} else {
@@ -84,7 +74,6 @@ std::string ListenerClientContextState::getLatestAtRemotePath(const std::string 
 		std::cerr << "Error: " << result->GetError() << std::endl;
 	} else {
 		for (const auto &row : *result) {
-			std::cerr << "Row: " << row.GetValue<std::string>(0) << std::endl;
 			return row.GetValue<std::string>(0);
 		}
 	}
@@ -94,12 +83,10 @@ std::string ListenerClientContextState::getLatestAtRemotePath(const std::string 
 void ListenerClientContextState::addLocalWatch(const std::string &path, const std::string &alias) {
 	auto listener = new UpdateListener(context, alias, this);
 	// TODO: bootstrap the listener with the first file to attach
-	std::cerr << "Adding watch to: " << path << std::endl;
 	attach(alias, path + "/" + getLatestFileAtPath(path), false);
 	fileWatcher->addWatch(path, listener, false);
 	// Start watching asynchronously the directories
 	fileWatcher->watch();
-	std::cerr << "Watching directories: " << fileWatcher->directories().size() << std::endl;
 }
 
 uint64_t ListenerClientContextState::S3PollInterval() {
@@ -110,10 +97,7 @@ uint64_t ListenerClientContextState::S3PollInterval() {
 
 // SELECT attach_auto('s3_db', 's3://test-bucket/presigned/attach*.db')
 void ListenerClientContextState::addRemoteWatch(const std::string &path, const std::string &alias) {
-	// TODO: implement
-	std::cerr << "Adding watch to: " << path << std::endl;
 	attach_latest_remote_file(path, alias, false);
-	// TODO: add a polling mechanism to check for new files every X seconds
 	// Create and start the timer service
 	auto s3_watcher = duckdb::make_uniq<S3Watcher>(this, path, alias, S3PollInterval());
 	s3_watcher->start();
@@ -122,10 +106,8 @@ void ListenerClientContextState::addRemoteWatch(const std::string &path, const s
 
 void ListenerClientContextState::addWatch(const std::string &path, const std::string &alias) {
 	if (duckdb::FileSystem::IsRemoteFile(path)) {
-		std::cerr << "Adding remote watch to: " << path << std::endl;
 		addRemoteWatch(path, alias);
 	} else {
-		std::cerr << "Adding local watch to: " << path << std::endl;
 		addLocalWatch(path, alias);
 	}
 }

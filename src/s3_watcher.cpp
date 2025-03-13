@@ -14,8 +14,6 @@ void S3Watcher::start() {
 
 	// Run the io_context in a separate thread
 	io_thread_ = std::thread([this]() { io_context_.run(); });
-
-	std::cerr << "Timer service started in the background." << std::endl;
 }
 
 void S3Watcher::stop() {
@@ -29,8 +27,6 @@ void S3Watcher::stop() {
 	if (io_thread_.joinable()) {
 		io_thread_.join();
 	}
-
-	std::cerr << "Timer service stopped." << std::endl;
 }
 
 void S3Watcher::timerHandler(const boost::system::error_code &error) {
@@ -38,8 +34,6 @@ void S3Watcher::timerHandler(const boost::system::error_code &error) {
 		// Timer was canceled or there was an error
 		return;
 	}
-
-	std::cerr << "Timer handler called" << std::endl;
 
 	listener_client_context_state->attach_latest_remote_file(path, alias, true);
 

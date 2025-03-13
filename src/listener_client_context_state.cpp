@@ -26,7 +26,7 @@ void ListenerClientContextState::attach_or_replace(const std::string &db_alias, 
 	// Check if the filename is lexicographically greater than the current attached file
 	if (new_db_path > current_db_path) {
 		duckdb::Connection con(*context->db);
-		auto query = "ATTACH OR REPLACE '" + new_db_path + "' AS " + db_alias;
+		auto query = "ATTACH OR REPLACE '" + new_db_path + "' AS " + db_alias + " (READ_ONLY)";
 		std::cerr << "Attaching " << query << std::endl;
 		auto result = con.Query(query);
 		if (result->HasError()) {
@@ -65,6 +65,20 @@ std::string ListenerClientContextState::getLatestFileAtPath(const std::string &p
 	return latest_file;
 }
 
+std::string ListenerClientContextState::getLatestAtRemotePath(const std::string &path) {
+	duckdb::Connection con(*context->db);
+	auto result = con.Query("SELECT filename FROM read_blob(CAST(? AS text)) ORDER BY filename ASC LIMIT 1", path);
+	if (result->HasError()) {
+		std::cerr << "Error: " << result->GetError() << std::endl;
+	} else {
+		for (const auto &row : *result) {
+			std::cerr << "Row: " << row.GetValue<std::string>(0) << std::endl;
+			return row.GetValue<std::string>(0);
+		}
+	}
+	return "";
+}
+
 void ListenerClientContextState::addLocalWatch(const std::string &path, const std::string &alias) {
 	auto listener = new UpdateListener(context, alias, this);
 	// TODO: bootstrap the listener with the first file to attach
@@ -79,16 +93,9 @@ void ListenerClientContextState::addLocalWatch(const std::string &path, const st
 // SELECT attach_auto('s3_db', 's3://test-bucket/presigned/attach*.db')
 void ListenerClientContextState::addRemoteWatch(const std::string &path, const std::string &alias) {
 	// TODO: implement
-	duckdb::Connection con(*context->db);
-	auto result = con.Query("SELECT filename FROM read_blob(CAST(? AS text)) ORDER BY filename ASC LIMIT 1", path);
-	if (result->HasError()) {
-		std::cerr << "Error: " << result->GetError() << std::endl;
-	} else {
-		for (const auto &row : *result) {
-			std::cerr << "Row: " << row.GetValue<std::string>(0) << std::endl;
-			attach(alias, row.GetValue<std::string>(0), false);
-		}
-	}
+	std::cerr << "Adding watch to: " << path << std::endl;
+	attach(alias, getLatestAtRemotePath(path), false);
+	// TODO: add a polling mechanism to check for new files every X seconds
 }
 
 void ListenerClientContextState::addWatch(const std::string &path, const std::string &alias) {

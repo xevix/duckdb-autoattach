@@ -18,6 +18,8 @@ public:
 
 	std::string getLatestFileAtPath(const std::string &path);
 
+	std::string getLatestAtRemotePath(const std::string &path);
+
 	void addLocalWatch(const std::string &path, const std::string &alias);
 
 	// SELECT attach_auto('s3_db', 's3://test-bucket/presigned/attach*.db')

@@ -83,7 +83,7 @@ std::string ListenerClientContextState::getLatestAtRemotePath(const std::string 
 void ListenerClientContextState::addLocalWatch(const std::string &path, const std::string &alias) {
 	auto listener = new UpdateListener(context, alias, this);
 	// TODO: bootstrap the listener with the first file to attach
-	attach(alias, path + "/" + getLatestFileAtPath(path), false);
+	attach(alias, path + boost::filesystem::path::preferred_separator + getLatestFileAtPath(path), false);
 	fileWatcher->addWatch(path, listener, false);
 	// Start watching asynchronously the directories
 	fileWatcher->watch();

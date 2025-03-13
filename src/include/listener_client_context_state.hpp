@@ -25,6 +25,8 @@ public:
 
 	void addLocalWatch(const std::string &path, const std::string &alias);
 
+	uint64_t S3PollInterval();
+
 	// SELECT attach_auto('s3_db', 's3://test-bucket/presigned/attach*.db')
 	void addRemoteWatch(const std::string &path, const std::string &alias);
 

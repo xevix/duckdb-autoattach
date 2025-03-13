@@ -5,6 +5,8 @@
 #include "listener_client_context_state.hpp"
 #include "update_listener.hpp"
 #include "s3_watcher.hpp"
+#include "constants.hpp"
+
 efsw::FileWatcher *ListenerClientContextState::getFileWatcher() {
 	return fileWatcher;
 }
@@ -100,6 +102,12 @@ void ListenerClientContextState::addLocalWatch(const std::string &path, const st
 	std::cerr << "Watching directories: " << fileWatcher->directories().size() << std::endl;
 }
 
+uint64_t ListenerClientContextState::S3PollInterval() {
+	duckdb::Value result;
+	(void)context->TryGetCurrentSetting(duckdb::S3_POLL_INTERVAL_CONFIG_VARIABLE, result);
+	return result.GetValue<uint64_t>();
+}
+
 // SELECT attach_auto('s3_db', 's3://test-bucket/presigned/attach*.db')
 void ListenerClientContextState::addRemoteWatch(const std::string &path, const std::string &alias) {
 	// TODO: implement
@@ -107,7 +115,7 @@ void ListenerClientContextState::addRemoteWatch(const std::string &path, const s
 	attach_latest_remote_file(path, alias, false);
 	// TODO: add a polling mechanism to check for new files every X seconds
 	// Create and start the timer service
-	auto s3_watcher = duckdb::make_uniq<S3Watcher>(this, path, alias, 5);
+	auto s3_watcher = duckdb::make_uniq<S3Watcher>(this, path, alias, S3PollInterval());
 	s3_watcher->start();
 	s3Watchers.emplace_back(std::move(s3_watcher));
 }

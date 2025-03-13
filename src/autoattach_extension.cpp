@@ -35,6 +35,9 @@ inline void AutoattachScalarFun(DataChunk &args, ExpressionState &state, Vector 
 }
 
 static void LoadInternal(DatabaseInstance &instance) {
+	auto &config = DBConfig::GetConfig(instance);
+	config.AddExtensionOption("s3_poll_interval", "S3 poll interval (in seconds)", LogicalType::UBIGINT,
+	                          Value::UBIGINT(60));
 	// Register scalar function with 2 arguments
 	auto autoattach_scalar_function = ScalarFunction("attach_auto", {LogicalType::VARCHAR, LogicalType::VARCHAR},
 	                                                 LogicalType::VARCHAR, AutoattachScalarFun);

@@ -19,6 +19,6 @@ void UpdateListener::handleFileAction(efsw::WatchID watchid, const std::string &
 		// throw an error.
 		break;
 	default:
-		std::cerr << "Unknown file action: " << action << std::endl;
+		break;
 	}
 }

@@ -19,6 +19,8 @@ public:
 
 	void attach_latest_remote_file(const std::string &path, const std::string &alias, bool lock);
 
+	void detach(const std::string &alias);
+
 	std::string getLatestFileAtPath(const std::string &path);
 
 	std::string getLatestAtRemotePath(const std::string &path);
@@ -31,8 +33,11 @@ public:
 
 	void addWatch(const std::string &path, const std::string &alias);
 
+	void removeWatch(const std::string &alias);
+
 private:
 	efsw::FileWatcher *fileWatcher = nullptr;
+	std::unordered_map<std::string, efsw::WatchID> fileWatchIds;
 	duckdb::ClientContext *context = nullptr;
-	std::vector<std::unique_ptr<S3Watcher>> s3Watchers;
+	std::unordered_map<std::string, std::unique_ptr<S3Watcher>> s3Watchers;
 };

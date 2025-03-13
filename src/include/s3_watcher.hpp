@@ -31,8 +31,15 @@ public:
 		stop();
 	}
 
-	void start();
+	std::string get_path() const {
+		return path;
+	}
 
+	std::string get_alias() const {
+		return alias;
+	}
+
+	void start();
 	void stop();
 
 private:

@@ -47,6 +47,15 @@ void ListenerClientContextState::attach_latest_remote_file(const std::string &pa
 	attach(alias, latest_file, lock);
 }
 
+void ListenerClientContextState::detach(const std::string &alias) {
+	duckdb::Connection con(*context->db);
+	auto query = "DETACH " + alias;
+	auto result = con.Query(query);
+	if (result->HasError()) {
+		result->ThrowError();
+	}
+}
+
 std::string ListenerClientContextState::getLatestFileAtPath(const std::string &path) {
 	std::string latest_file = "";
 	boost::filesystem::path dir_path(path);
@@ -82,7 +91,7 @@ void ListenerClientContextState::addLocalWatch(const std::string &path, const st
 	auto listener = new UpdateListener(context, alias, this);
 	// Bootstrap the listener with the first file to attach
 	attach(alias, path + boost::filesystem::path::preferred_separator + getLatestFileAtPath(path), false);
-	fileWatcher->addWatch(path, listener, false);
+	fileWatchIds[alias] = fileWatcher->addWatch(path, listener, false);
 	// Start watching asynchronously the directories
 	fileWatcher->watch();
 }
@@ -97,7 +106,7 @@ void ListenerClientContextState::addRemoteWatch(const std::string &path, const s
 	attach_latest_remote_file(path, alias, false);
 	auto s3_watcher = duckdb::make_uniq<S3Watcher>(this, path, alias, S3PollInterval());
 	s3_watcher->start();
-	s3Watchers.emplace_back(std::move(s3_watcher));
+	s3Watchers[alias] = std::move(s3_watcher);
 }
 
 void ListenerClientContextState::addWatch(const std::string &path, const std::string &alias) {
@@ -106,4 +115,17 @@ void ListenerClientContextState::addWatch(const std::string &path, const std::st
 	} else {
 		addLocalWatch(path, alias);
 	}
+}
+
+void ListenerClientContextState::removeWatch(const std::string &alias) {
+	auto watcher = s3Watchers.find(alias);
+	if (watcher != s3Watchers.end()) {
+		watcher->second->stop();
+		s3Watchers.erase(watcher);
+	} else {
+		auto watch_id = fileWatchIds[alias];
+		fileWatcher->removeWatch(watch_id);
+		fileWatchIds.erase(alias);
+	}
+	detach(alias);
 }

@@ -33,13 +33,30 @@ inline void AutoattachScalarFun(DataChunk &args, ExpressionState &state, Vector 
 	    });
 }
 
+inline void AutodetachScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &name_vector = args.data[0];
+
+	auto const &listener_state = state.GetContext().registered_state->GetOrCreate<ListenerClientContextState>(
+	    "listener_client_context_state", &state.GetContext());
+
+	UnaryExecutor::Execute<string_t, string_t>(name_vector, result, args.size(), [&](string_t name) {
+		listener_state->removeWatch(name.GetString());
+		return StringVector::AddString(result, "alias: " + name.GetString());
+	});
+}
+
 static void LoadInternal(DatabaseInstance &instance) {
 	auto &config = DBConfig::GetConfig(instance);
 	config.AddExtensionOption("s3_poll_interval", "S3 poll interval (in seconds)", LogicalType::UBIGINT,
 	                          Value::UBIGINT(60));
+
 	auto autoattach_scalar_function = ScalarFunction("attach_auto", {LogicalType::VARCHAR, LogicalType::VARCHAR},
 	                                                 LogicalType::VARCHAR, AutoattachScalarFun);
 	ExtensionUtil::RegisterFunction(instance, autoattach_scalar_function);
+
+	auto autodetach_scalar_function =
+	    ScalarFunction("detach_auto", {LogicalType::VARCHAR}, LogicalType::VARCHAR, AutodetachScalarFun);
+	ExtensionUtil::RegisterFunction(instance, autodetach_scalar_function);
 }
 
 void AutoattachExtension::Load(DuckDB &db) {

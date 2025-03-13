@@ -42,6 +42,9 @@ FROM watched_db.tbl;
 -- Continue querying as usual, but will have latest data
 FROM watched_db.tbl;
 
+-- Stop watching and detach when done
+SELECT detach_auto('watched_db');
+
 ```
 
 ## Building

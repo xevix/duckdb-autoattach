@@ -21,7 +21,6 @@ std::string ListenerClientContextState::get_current_db_path(const std::string &d
 }
 
 void ListenerClientContextState::attach_or_replace(const std::string &db_alias, const std::string &new_db_path) {
-	// Run a Query() to fetch the current attached file
 	auto current_db_path = get_current_db_path(db_alias);
 	// Check if the filename is lexicographically greater than the current attached file
 	if (new_db_path > current_db_path) {
@@ -49,7 +48,6 @@ void ListenerClientContextState::attach_latest_remote_file(const std::string &pa
 }
 
 std::string ListenerClientContextState::getLatestFileAtPath(const std::string &path) {
-	// Get all files in the directory using Boost filesystem
 	std::string latest_file = "";
 	boost::filesystem::path dir_path(path);
 
@@ -82,7 +80,7 @@ std::string ListenerClientContextState::getLatestAtRemotePath(const std::string 
 
 void ListenerClientContextState::addLocalWatch(const std::string &path, const std::string &alias) {
 	auto listener = new UpdateListener(context, alias, this);
-	// TODO: bootstrap the listener with the first file to attach
+	// Bootstrap the listener with the first file to attach
 	attach(alias, path + boost::filesystem::path::preferred_separator + getLatestFileAtPath(path), false);
 	fileWatcher->addWatch(path, listener, false);
 	// Start watching asynchronously the directories
@@ -95,10 +93,8 @@ uint64_t ListenerClientContextState::S3PollInterval() {
 	return result.GetValue<uint64_t>();
 }
 
-// SELECT attach_auto('s3_db', 's3://test-bucket/presigned/attach*.db')
 void ListenerClientContextState::addRemoteWatch(const std::string &path, const std::string &alias) {
 	attach_latest_remote_file(path, alias, false);
-	// Create and start the timer service
 	auto s3_watcher = duckdb::make_uniq<S3Watcher>(this, path, alias, S3PollInterval());
 	s3_watcher->start();
 	s3Watchers.emplace_back(std::move(s3_watcher));

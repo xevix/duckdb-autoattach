@@ -5,8 +5,6 @@
 #include "duckdb/main/attached_database.hpp"
 #include "update_listener.hpp"
 
-
-
 void UpdateListener::handleFileAction(efsw::WatchID watchid, const std::string &dir, const std::string &filename,
                                       efsw::Action action, std::string oldFilename) {
 

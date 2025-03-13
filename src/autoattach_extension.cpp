@@ -24,8 +24,8 @@ inline void AutoattachScalarFun(DataChunk &args, ExpressionState &state, Vector 
 	auto &name_vector = args.data[0];
 	auto &pattern_vector = args.data[1];
 
-	auto const &listener_state =
-	    state.GetContext().registered_state->GetOrCreate<ListenerClientContextState>("listener_client_context_state", &state.GetContext());
+	auto const &listener_state = state.GetContext().registered_state->GetOrCreate<ListenerClientContextState>(
+	    "listener_client_context_state", &state.GetContext());
 
 	BinaryExecutor::Execute<string_t, string_t, string_t>(
 	    name_vector, pattern_vector, result, args.size(), [&](string_t name, string_t pattern) {

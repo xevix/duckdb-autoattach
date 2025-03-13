@@ -8,9 +8,11 @@ private:
 	duckdb::ClientContext *context;
 	std::string current_attached_file;
 	std::string db_alias;
-    ListenerClientContextState *listener_state;
+	ListenerClientContextState *listener_state;
+
 public:
-	UpdateListener(duckdb::ClientContext *context, const std::string &alias, ListenerClientContextState *listener_state) : context(context), db_alias(alias), listener_state(listener_state) {
+	UpdateListener(duckdb::ClientContext *context, const std::string &alias, ListenerClientContextState *listener_state)
+	    : context(context), db_alias(alias), listener_state(listener_state) {
 	}
 
 	void handleFileAction(efsw::WatchID watchid, const std::string &dir, const std::string &filename,

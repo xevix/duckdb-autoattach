@@ -5,7 +5,8 @@
 
 class ListenerClientContextState : public duckdb::ClientContextState {
 public:
-	ListenerClientContextState(duckdb::ClientContext *context) : fileWatcher(new efsw::FileWatcher()), context(context) {
+	ListenerClientContextState(duckdb::ClientContext *context)
+	    : fileWatcher(new efsw::FileWatcher()), context(context) {
 	}
 	efsw::FileWatcher *getFileWatcher();
 
@@ -17,14 +18,14 @@ public:
 
 	std::string getLatestFileAtPath(const std::string &path);
 
-    void addLocalWatch(const std::string &path, const std::string &alias);
+	void addLocalWatch(const std::string &path, const std::string &alias);
 
-    // SELECT attach_auto('s3_db', 's3://test-bucket/presigned/attach*.db')
-    void addRemoteWatch(const std::string &path, const std::string &alias);
+	// SELECT attach_auto('s3_db', 's3://test-bucket/presigned/attach*.db')
+	void addRemoteWatch(const std::string &path, const std::string &alias);
 
 	void addWatch(const std::string &path, const std::string &alias);
 
 private:
 	efsw::FileWatcher *fileWatcher = nullptr;
-    duckdb::ClientContext *context = nullptr;
+	duckdb::ClientContext *context = nullptr;
 };

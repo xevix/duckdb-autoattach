@@ -29,7 +29,7 @@ void ListenerClientContextState::attach_or_replace(const std::string &db_alias, 
 		auto query = "ATTACH OR REPLACE '" + new_db_path + "' AS " + db_alias + " (READ_ONLY)";
 		auto result = con.Query(query);
 		if (result->HasError()) {
-			std::cerr << result->GetError() << std::endl;
+			result->ThrowError();
 		}
 	}
 }

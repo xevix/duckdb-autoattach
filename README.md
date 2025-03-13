@@ -22,6 +22,8 @@ For now it must be built from source using the standard DuckDB build mechanism.
 
 ```
 $ GEN=ninja make
+# For S3 support
+CORE_EXTENSIONS='httpfs;parquet' GEN=ninja make
 ```
 
 ## Usage

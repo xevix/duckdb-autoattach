@@ -34,6 +34,7 @@ CORE_EXTENSIONS='httpfs;parquet' GEN=ninja make
 -- ATTACH using alias 'watched_db' files matching the given pattern
 SELECT attach_auto('watched_db', '/path/to/watch/*.duckdb');
 -- Or on an S3 path. Requires S3 querying setup in DuckDB
+SET s3_poll_interval = 5; -- Optionally set poll interval (in seconds)
 SELECT attach_auto('s3_db', 's3://my-bucket/*.duckdb');
 
 -- Query as usual
